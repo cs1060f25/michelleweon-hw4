@@ -1,0 +1,12 @@
+ID,Name,Description,Value,Notes
+1,Test & Co,"Quoted, comma",100.50,Contains & symbol
+2,Smith's Store,Contains 'quotes',200.75,Has apostrophe
+3,Multi
+Line,Contains newlines,300.25,Multi-line description
+4,Empty Field,,400.00,Empty description
+5,Unicode Test,测试中文,500.00,Chinese characters
+6,Special Chars,!@#$%^&*(),600.00,Special symbols
+7,Quotes "Test",Double quotes,700.00,Double quotes
+8,Backslash\Test,Backslash test,800.00,Contains backslash
+9,Tab	Test,Tab character,900.00,Contains tab
+10,Null\0Test,Null character,1000.00,Contains null

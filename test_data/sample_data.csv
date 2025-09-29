@@ -1,0 +1,21 @@
+ID,Name,Age,City,Salary,Department,Start_Date,Is_Active
+1,John Smith,25,New York,50000,Engineering,2023-01-15,True
+2,Jane Doe,30,Los Angeles,60000,Marketing,2022-11-20,True
+3,Bob Johnson,35,Chicago,55000,Engineering,2023-03-10,True
+4,Alice Brown,28,Houston,52000,Sales,2023-02-01,True
+5,Charlie Wilson,45,Phoenix,70000,Management,2021-06-15,True
+6,Diana Lee,32,Philadelphia,58000,Marketing,2022-09-05,True
+7,Eve Davis,29,San Antonio,51000,Engineering,2023-04-12,True
+8,Frank Miller,38,San Diego,65000,Engineering,2022-12-01,True
+9,Grace Taylor,27,Dallas,49000,Sales,2023-01-30,True
+10,Henry Moore,41,San Jose,75000,Management,2020-08-15,True
+11,Ivy Chen,26,Austin,48000,Marketing,2023-05-20,True
+12,Jack Wilson,33,Denver,62000,Engineering,2022-10-10,True
+13,Kate Smith,31,Seattle,59000,Sales,2023-03-25,True
+14,Liam Brown,29,Miami,53000,Marketing,2023-02-14,True
+15,Maya Patel,36,Atlanta,64000,Engineering,2022-07-08,True
+16,Noah Garcia,24,Portland,47000,Sales,2023-06-01,True
+17,Olivia Martinez,30,Las Vegas,56000,Marketing,2023-01-05,True
+18,Paul Anderson,42,Boston,68000,Management,2021-11-12,True
+19,Quinn Thompson,28,Detroit,51000,Engineering,2023-04-18,True
+20,Rachel White,35,Minneapolis,61000,Sales,2022-08-22,True

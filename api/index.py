@@ -40,11 +40,12 @@ def get_county_data():
             z.default_city,
             COUNT(z.col__zip) as zip_count
         FROM zip_county z
+        WHERE z.county != '' AND z.state_abbreviation != ''
         """
         
         params = []
         if state:
-            query += " WHERE z.state_abbreviation = ?"
+            query += " AND z.state_abbreviation = ?"
             params.append(state)
             
         query += " GROUP BY z.county, z.state_abbreviation, z.default_city ORDER BY z.county"
@@ -484,7 +485,8 @@ def search_counties():
             z.default_city,
             COUNT(z.col__zip) as zip_count
         FROM zip_county z
-        WHERE z.county LIKE ? OR z.state_abbreviation LIKE ?
+        WHERE (z.county LIKE ? OR z.state_abbreviation LIKE ?)
+        AND z.county != '' AND z.state_abbreviation != ''
         GROUP BY z.county, z.state_abbreviation, z.default_city
         ORDER BY z.county
         """
@@ -520,14 +522,15 @@ def get_stats():
         
         # Get counts
         zip_count = conn.execute("SELECT COUNT(*) FROM zip_county").fetchone()[0]
-        county_count = conn.execute("SELECT COUNT(DISTINCT county || ', ' || state_abbreviation) FROM zip_county").fetchone()[0]
-        state_count = conn.execute("SELECT COUNT(DISTINCT state_abbreviation) FROM zip_county").fetchone()[0]
+        county_count = conn.execute("SELECT COUNT(DISTINCT county || ', ' || state_abbreviation) FROM zip_county WHERE county != '' AND state_abbreviation != ''").fetchone()[0]
+        state_count = conn.execute("SELECT COUNT(DISTINCT state_abbreviation) FROM zip_county WHERE state_abbreviation != ''").fetchone()[0]
         health_count = conn.execute("SELECT COUNT(*) FROM county_health_rankings").fetchone()[0]
         
         # Get state distribution
         state_dist = conn.execute("""
             SELECT state_abbreviation as state, COUNT(DISTINCT county) as county_count, COUNT(col__zip) as zip_count
             FROM zip_county 
+            WHERE state_abbreviation != '' AND county != ''
             GROUP BY state_abbreviation 
             ORDER BY county_count DESC
         """).fetchall()
@@ -679,6 +682,7 @@ def get_cities():
             GROUP_CONCAT(DISTINCT state_abbreviation) as states
         FROM zip_county
         WHERE default_city IS NOT NULL AND default_city != ''
+        AND county != '' AND state_abbreviation != ''
         """
         
         params = []
@@ -822,6 +826,7 @@ def get_states():
             COUNT(DISTINCT default_city) as city_count,
             COUNT(col__zip) as zip_count
         FROM zip_county
+        WHERE state_abbreviation != '' AND county != ''
         GROUP BY state_abbreviation
         ORDER BY county_count DESC
         """
@@ -1012,7 +1017,7 @@ def search_locations():
                 COUNT(col__zip) as zip_count,
                 'County' as description
             FROM zip_county
-            WHERE county LIKE ?
+            WHERE county LIKE ? AND county != '' AND state_abbreviation != ''
             """
             params = [f"%{query}%"]
             if state:
@@ -1035,6 +1040,7 @@ def search_locations():
                 'City' as description
             FROM zip_county
             WHERE default_city LIKE ? AND default_city IS NOT NULL AND default_city != ''
+            AND county != '' AND state_abbreviation != ''
             """
             params = [f"%{query}%"]
             if state:
@@ -1056,7 +1062,7 @@ def search_locations():
                 COUNT(col__zip) as zip_count,
                 'State' as description
             FROM zip_county
-            WHERE state_abbreviation LIKE ?
+            WHERE state_abbreviation LIKE ? AND state_abbreviation != ''
             GROUP BY state_abbreviation
             """
             params = [f"%{query}%"]
@@ -1105,6 +1111,7 @@ def get_location_analytics():
                 COUNT(col__zip) as zip_count,
                 COUNT(DISTINCT default_city) as city_count
             FROM zip_county
+            WHERE state_abbreviation != '' AND county != ''
             GROUP BY state_abbreviation
             ORDER BY county_count DESC
         """).fetchall()
@@ -1118,6 +1125,7 @@ def get_location_analytics():
                 COUNT(col__zip) as zip_count
             FROM zip_county
             WHERE default_city IS NOT NULL AND default_city != ''
+            AND county != '' AND state_abbreviation != ''
             GROUP BY default_city
             ORDER BY zip_count DESC
             LIMIT 10
@@ -1176,4 +1184,6 @@ def get_location_analytics():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    import os
+    port = int(os.environ.get('PORT', 5002))
+    app.run(debug=True, port=port)
