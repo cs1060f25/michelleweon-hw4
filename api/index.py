@@ -13,6 +13,12 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_zip_column_name(cursor):
+    """Get the correct ZIP column name (zip or col__zip) for compatibility"""
+    cursor.execute("PRAGMA table_info(zip_county)")
+    columns = [col[1] for col in cursor.fetchall()]
+    return 'zip' if 'zip' in columns else 'col__zip'
+
 
 @app.route('/')
 def index():
@@ -164,7 +170,7 @@ def get_county_data():
             z.county,
             z.state_abbreviation as state,
             z.default_city,
-            COUNT(z.col__zip) as zip_count
+            COUNT(z.zip) as zip_count
         FROM zip_county z
         WHERE z.county != '' AND z.state_abbreviation != ''
         """
@@ -214,8 +220,8 @@ def get_county_details(county_name):
             z.county,
             z.state_abbreviation as state,
             z.default_city,
-            COUNT(z.col__zip) as zip_count,
-            GROUP_CONCAT(DISTINCT z.col__zip) as zip_codes
+            COUNT(z.zip) as zip_count,
+            GROUP_CONCAT(DISTINCT z.zip) as zip_codes
         FROM zip_county z
         WHERE z.county = ?
         """
@@ -267,7 +273,7 @@ def get_zip_info(zip_code):
         
         # Get ZIP code info
         zip_query = """
-        SELECT * FROM zip_county WHERE col__zip = ?
+        SELECT * FROM zip_county WHERE zip = ?
         """
         zip_data = conn.execute(zip_query, [zip_code]).fetchone()
         
@@ -301,7 +307,7 @@ def get_zip_info(zip_code):
         conn.close()
         
         result = {
-            'zip_code': zip_data['col__zip'],
+            'zip_code': zip_data['zip'],
             'county': zip_data['county'],
             'state': zip_data['state_abbreviation'],
             'default_city': zip_data['default_city'],
@@ -609,7 +615,7 @@ def search_counties():
             z.county,
             z.state_abbreviation as state,
             z.default_city,
-            COUNT(z.col__zip) as zip_count
+            COUNT(z.zip) as zip_count
         FROM zip_county z
         WHERE (z.county LIKE ? OR z.state_abbreviation LIKE ?)
         AND z.county != '' AND z.state_abbreviation != ''
@@ -654,7 +660,7 @@ def get_stats():
         
         # Get state distribution
         state_dist = conn.execute("""
-            SELECT state_abbreviation as state, COUNT(DISTINCT county) as county_count, COUNT(col__zip) as zip_count
+            SELECT state_abbreviation as state, COUNT(DISTINCT county) as county_count, COUNT(zip) as zip_count
             FROM zip_county 
             WHERE state_abbreviation != '' AND county != ''
             GROUP BY state_abbreviation 
@@ -698,17 +704,17 @@ def get_zip_location_details(zip_code):
         # Get ZIP code info with all related data
         zip_query = """
         SELECT 
-            z.col__zip as zip_code,
+            z.zip as zip_code,
             z.county,
             z.state_abbreviation as state,
             z.default_city,
-            COUNT(DISTINCT z2.col__zip) as total_zips_in_county,
-            COUNT(DISTINCT z3.col__zip) as total_zips_in_city
+            COUNT(DISTINCT z2.zip) as total_zips_in_county,
+            COUNT(DISTINCT z3.zip) as total_zips_in_city
         FROM zip_county z
         LEFT JOIN zip_county z2 ON z2.county = z.county AND z2.state_abbreviation = z.state_abbreviation
         LEFT JOIN zip_county z3 ON z3.default_city = z.default_city
-        WHERE z.col__zip = ?
-        GROUP BY z.col__zip, z.county, z.state_abbreviation, z.default_city
+        WHERE z.zip = ?
+        GROUP BY z.zip, z.county, z.state_abbreviation, z.default_city
         """
         
         zip_data = conn.execute(zip_query, [zip_code]).fetchone()
@@ -742,17 +748,17 @@ def get_zip_location_details(zip_code):
         
         # Get all ZIP codes in the same county
         county_zips_query = """
-        SELECT col__zip FROM zip_county 
+        SELECT zip FROM zip_county 
         WHERE county = ? AND state_abbreviation = ?
-        ORDER BY col__zip
+        ORDER BY zip
         """
         county_zips = conn.execute(county_zips_query, [zip_data['county'], zip_data['state']]).fetchall()
         
         # Get all ZIP codes in the same city
         city_zips_query = """
-        SELECT col__zip, county, state_abbreviation FROM zip_county 
+        SELECT zip, county, state_abbreviation FROM zip_county 
         WHERE default_city = ?
-        ORDER BY county, col__zip
+        ORDER BY county, zip
         """
         city_zips = conn.execute(city_zips_query, [zip_data['default_city']]).fetchall()
         
@@ -770,10 +776,10 @@ def get_zip_location_details(zip_code):
                 'total_zips_in_city': zip_data['total_zips_in_city']
             },
             'health_rankings': [dict(health) for health in health_data] if health_data else [],
-            'county_zips': [zip['col__zip'] for zip in county_zips],
+            'county_zips': [zip['zip'] for zip in county_zips],
             'city_zips': [
                 {
-                    'zip_code': zip['col__zip'],
+                    'zip_code': zip['zip'],
                     'county': zip['county'],
                     'state': zip['state_abbreviation']
                 } for zip in city_zips
@@ -804,7 +810,7 @@ def get_cities():
             default_city,
             COUNT(DISTINCT county || ', ' || state_abbreviation) as county_count,
             COUNT(DISTINCT state_abbreviation) as state_count,
-            COUNT(col__zip) as zip_count,
+            COUNT(zip) as zip_count,
             GROUP_CONCAT(DISTINCT state_abbreviation) as states
         FROM zip_county
         WHERE default_city IS NOT NULL AND default_city != ''
@@ -950,7 +956,7 @@ def get_states():
             state_abbreviation as state,
             COUNT(DISTINCT county) as county_count,
             COUNT(DISTINCT default_city) as city_count,
-            COUNT(col__zip) as zip_count
+            COUNT(zip) as zip_count
         FROM zip_county
         WHERE state_abbreviation != '' AND county != ''
         GROUP BY state_abbreviation
@@ -1115,13 +1121,13 @@ def search_locations():
             zip_query = """
             SELECT 
                 'zip' as type,
-                col__zip as name,
+                zip as name,
                 county,
                 state_abbreviation as state,
                 default_city,
                 'ZIP Code' as description
             FROM zip_county
-            WHERE col__zip LIKE ?
+            WHERE zip LIKE ?
             """
             params = [f"%{query}%"]
             if state:
@@ -1140,7 +1146,7 @@ def search_locations():
                 county,
                 state_abbreviation as state,
                 default_city,
-                COUNT(col__zip) as zip_count,
+                COUNT(zip) as zip_count,
                 'County' as description
             FROM zip_county
             WHERE county LIKE ? AND county != '' AND state_abbreviation != ''
@@ -1162,7 +1168,7 @@ def search_locations():
                 default_city as name,
                 default_city,
                 COUNT(DISTINCT county || ', ' || state_abbreviation) as county_count,
-                COUNT(col__zip) as zip_count,
+                COUNT(zip) as zip_count,
                 'City' as description
             FROM zip_county
             WHERE default_city LIKE ? AND default_city IS NOT NULL AND default_city != ''
@@ -1185,7 +1191,7 @@ def search_locations():
                 state_abbreviation as name,
                 state_abbreviation as state,
                 COUNT(DISTINCT county) as county_count,
-                COUNT(col__zip) as zip_count,
+                COUNT(zip) as zip_count,
                 'State' as description
             FROM zip_county
             WHERE state_abbreviation LIKE ? AND state_abbreviation != ''
@@ -1234,7 +1240,7 @@ def get_location_analytics():
             SELECT 
                 state_abbreviation as state,
                 COUNT(DISTINCT county) as county_count,
-                COUNT(col__zip) as zip_count,
+                COUNT(zip) as zip_count,
                 COUNT(DISTINCT default_city) as city_count
             FROM zip_county
             WHERE state_abbreviation != '' AND county != ''
@@ -1248,7 +1254,7 @@ def get_location_analytics():
                 default_city as city,
                 COUNT(DISTINCT county || ', ' || state_abbreviation) as county_count,
                 COUNT(DISTINCT state_abbreviation) as state_count,
-                COUNT(col__zip) as zip_count
+                COUNT(zip) as zip_count
             FROM zip_county
             WHERE default_city IS NOT NULL AND default_city != ''
             AND county != '' AND state_abbreviation != ''
